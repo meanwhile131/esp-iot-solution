@@ -1,0 +1,27 @@
+name: Build examples and test apps
+on: [push, pull_request]
+
+jobs:
+  get-idf-versions:
+    runs-on: ubuntu-slim
+    outputs:
+      versions: ${{ steps.find-versions.outputs.versions }}
+    steps:
+      - uses: actions/checkout@v6
+      - name: Find IDF versions
+        id: find-versions
+        run: echo "versions=$(python tools/ci/find_idf_versions.py)" >> $GITHUB_OUTPUT
+  build:
+    runs-on: ubuntu-latest
+    container: espressif/idf:${{ matrix.idf-version }}
+    needs: get-idf-versions
+    strategy:
+      matrix:
+        idf-version: ${{ fromJson(needs.get-idf-versions.outputs.versions) }}
+      fail-fast: false
+    steps:
+      - uses: actions/checkout@v6
+      - name: Build
+        run: |
+          . /opt/esp/idf/export.sh
+          python tools/ci/build_apps.py
